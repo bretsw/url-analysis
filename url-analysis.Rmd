@@ -1,0 +1,94 @@
+---
+title: "URL Analysis"
+author: "K. Bret Staudt Willet"
+date: "11/12/2019"
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    float_toc: yes
+    toc: yes
+---
+
+# Get set up
+
+This section loads the data and packages and starts to process the data, but doesn't calculate any statistics or create any results.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+usethis::use_git_ignore(c("*.csv", "*.rds"))
+```
+
+## Load packages
+
+```{r, include=FALSE}
+library(tidyverse)
+library(longurl)
+library(urltools)
+```
+
+## Load the data
+
+Having completed the steps in the setup.Rmd file, you now have the dataset stored in your local repository and can load it as usual. 
+
+```{r, include=FALSE}
+full_tweets_og <- readRDS("downloadedTweets_full.rds")
+```
+
+# Review the full dataset
+
+```{r, include=FALSE}
+full_tweets <- full_tweets_og %>%
+        mutate(full_urls = unlist(urls_url),
+               domains = domain(full_urls))
+```
+
+Create a vector of domain shorteners.
+
+```{r, include=FALSE}
+shorteners <- c("bit.ly", "ow.ly", "buff.ly", "goo.gl", "ln.is", "tinyurl.com", 
+                "share.es", "ht.ly", "fb.me", "wp.me", "ift.tt")
+```
+
+Create a function to find domains.
+
+```{r, include=FALSE}
+find_domain <- function(x) {
+    expand_urls(x) %>% 
+                pull(expanded_url) %>% 
+                domain() %>%
+                gsub("www[0-9]?.", "", .)
+}
+```
+
+Now, an example:
+
+```{r, include=TRUE, echo=TRUE}
+find_domain("bit.ly/2SfWO3K")
+```
+
+Expand all URLs and pull domain for whole dataset.
+
+```{r, include=TRUE, echo=FALSE}
+full_tweets <- full_tweets %>%
+        mutate(new_domains = map_if(domains, 
+                                    function(x) x %in% shorteners,
+                                    find_domain()
+                                    )
+               )
+```
+
+Create a table of results.
+
+```{r, include=TRUE, echo=FALSE}
+domains_table <- full_tweets$new_domains %>%
+        table() %>%
+        as.data.frame() %>%
+        sort(desc(Freq))
+```
+
+# Version/dependencies
+
+```{r, session-info}
+sessionInfo()
+```
